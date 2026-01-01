@@ -3,10 +3,10 @@ import express from "express";
 const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
-import wrapAsync from "../Middlewares/WrapSync.js";
-import ExpressError from "../Middlewares/ExpressError.js"
-import uploads from "../Middlewares/Multer.js"
-import { verifyToken } from "../Middlewares/auth.js";
+import wrapAsync from "../middlewares/WrapSync.js";
+import ExpressError from "../middlewares/ExpressError.js"
+import uploads from "../middlewares/multer.js"
+import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
 //add
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {

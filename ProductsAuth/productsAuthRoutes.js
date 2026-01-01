@@ -1,8 +1,8 @@
 import express from "express";
 import User from "../ProductsModel/productsUserSchema.js";
-import { generateToken, verifyToken } from "../Middlewares/auth.js";
-import wrapAsync from "../Middlewares/WrapSync.js";
-import ExpressError from "../Middlewares/ExpressError.js";
+import { generateToken, verifyToken } from "../middlewares/auth.js";
+import wrapAsync from "../middlewares/WrapSync.js";
+import ExpressError from "../middlewares/ExpressError.js";
 const isProd = process.env.NODE_ENV === "production";
 
 const router = express.Router();
