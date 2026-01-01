@@ -8,10 +8,6 @@ const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
 const allowedOrigins = process.env.CLIENT_URL.split(',');
-// app.options("*", cors({
-//   origin: allowedOrigins,
-//   credentials: true
-// }));
 app.use(cors({
     origin: allowedOrigins,
     credentials: true

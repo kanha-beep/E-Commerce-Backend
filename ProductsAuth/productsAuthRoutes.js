@@ -28,7 +28,8 @@ router.post("/register", wrapAsync(async (req, res) => {
     res.cookie("token", token, {
         httpOnly: true,
         secure: true,
-        sameSite: "none"
+        sameSite: "none",
+        path:"/"
     })
         .status(201).json({
             message: "User registered successfully",
@@ -56,7 +57,8 @@ router.post("/login", wrapAsync(async (req, res, next) => {
     res.cookie("token", token, {
         httpOnly: true,
         secure: true,
-        sameSite: "none"
+        sameSite: "none",
+        path:"/"
     })
         .status(200).json({
             message: "Login successful",
@@ -83,7 +85,8 @@ router.post("/logout", (req, res) => {
         .clearCookie("token", {
             httpOnly: true,
             secure: true,
-            sameSite: "none"
+            sameSite: "none",
+            path:"/"
         })
         .status(200)
         .json({ message: "Logged out successfully" });
