@@ -7,20 +7,23 @@ import wrapAsync from "../Middlewares/WrapSync.js";
 import ExpressError from "../Middlewares/ExpressError.js"
 import uploads from "../Middlewares/Multer.js"
 import { verifyToken } from "../Middlewares/auth.js";
+import User from "../ProductsModel/productsUserSchema.js";
 //add
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
-
+    const userId = req.user.id;
     const { name, price } = req.body;
     if (!name || !price) return next(new ExpressError("Name and price are required", 400));
-
-
-    const userId = req.user.id;
+    const user = await User.findById({ _id: userId });
+    console.log("got user: ", user)
+    user.roles = "seller";
+    await user.save();
+    console.log("role changes: ", user)
     const imgPath = req.file ? req.file.filename : null;
-
     const product = await Products.create({ name, price, owner: userId, image: imgPath });
     console.log("Product created:", product);
+    console.log("user of the product: ", user)
     res.status(201).json(product);
 }))
 router.patch("/:productsId", uploads.single("image"), wrapAsync(async (req, res, next) => {
@@ -30,10 +33,12 @@ router.patch("/:productsId", uploads.single("image"), wrapAsync(async (req, res,
     const userId = req.user.id;
     const imageName = req.file ? req.file.filename : null
     // console.log(imageName, productsId, userId);
+   
     const product = await Products.findById({ _id: productsId, owner: userId })
     // console.log("Product found:", product);
     if (!product) return next(new ExpressError("Product not found", 404));
     // console.log("owner starts")
+     if(userId !== product.owner.toString()) return next(new ExpressError("not owner", 401))
     // if (product.owner.toString() !== userId) return next(new ExpressError("Unauthorized", 401));
     // console.log("owner done")
     if (name) product.name = name;
