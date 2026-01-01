@@ -26,28 +26,34 @@ router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, 
     console.log("user of the product: ", user)
     res.status(201).json(product);
 }))
-router.patch("/:productsId", uploads.single("image"), wrapAsync(async (req, res, next) => {
+router.patch("/:productsId",verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("update image starts")
     const { productsId } = req.params;
+    console.log("2")
     const { name, price } = req.body;
+    console.log("got body")
     const userId = req.user.id;
+    console.log("3")
     const imageName = req.file ? req.file.filename : null
-    // console.log(imageName, productsId, userId);
-   
+    console.log("update image done")
+    console.log(imageName, productsId, userId);
+   console.log("finding product")
     const product = await Products.findById({ _id: productsId, owner: userId })
     // console.log("Product found:", product);
     if (!product) return next(new ExpressError("Product not found", 404));
-    // console.log("owner starts")
-     if(userId !== product.owner.toString()) return next(new ExpressError("not owner", 401))
+    console.log("owner starts")
+    console.log("owner: ", product.owner.toString())
+    console.log("user: ", userId)
+     if(userId.toString() !== product.owner.toString()) return next(new ExpressError("not owner", 401))
     // if (product.owner.toString() !== userId) return next(new ExpressError("Unauthorized", 401));
-    // console.log("owner done")
+    console.log("owner done")
     if (name) product.name = name;
     if (price) product.price = price;
     // console.log("fianlly changing image")
     if (req.file) {
         product.image = imageName;
     }
-    // console.log("Updated product:", product);
+    console.log("Updated product:", product);
     await product.save();
     res.status(200).json(product);
 }))
