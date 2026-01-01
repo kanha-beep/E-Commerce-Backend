@@ -1,17 +1,22 @@
 import multer from "multer"
 import path from "path"
 const storage = multer.diskStorage({
+    // tell the folder name
     destination: function (req, file, cb) {
         cb(null, "uploads/")
     },
+    // create the file name
     filename: function (req, file, cb) {
         const ext = path.extname(file.originalname);
         cb(null, Date.now() + ext)
     }
 })
 const fileFilter = (req, file, cb) => {
+    // get extension of file
     const ext = path.extname(file.originalname).toLowerCase();
-    const allowed_formats = /\.(jpeg|jpg|png)$/;
+    // prescribe allowed formats
+    const allowed_formats = /\.(jpeg|jpg|png|avif|webp)$/;
+    // test extracted extension with allowed
     if (allowed_formats.test(ext)) {
         cb(null, true)
     } else {

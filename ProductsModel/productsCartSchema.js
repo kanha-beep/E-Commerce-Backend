@@ -1,7 +1,10 @@
 import mongoose from "mongoose";
 
 const productsCartSchema = new mongoose.Schema({
-    owner: String,
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
     products: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product"
