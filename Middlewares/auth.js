@@ -13,20 +13,18 @@ export const verifyToken = async (req, res, next) => {
         const token = req.cookies.token;
         console.log("got token in verify auth: ", token)
 
-        if (!token) {
-            throw new ExpressError('Access denied. No token provided.', 401);
-        }
+        if (!token) return next(new ExpressError('Access denied. No token provided.', 401))
+
 
         const decoded = jwt.verify(token, JWT_SECRET);
         const user = await User.findById(decoded.userId);
         console.log("user in verify auth: ", user)
-        if (!user) {
-            throw new ExpressError('Invalid token.', 401);
-        }
+        if (!user) return next(new ExpressError('User not authorized in token.', 401))
+
 
         req.user = { id: user._id, username: user.username, email: user.email };
         next();
     } catch (error) {
-        throw new ExpressError('Invalid token.', 401);
+        next(new ExpressError('Error in Token.', 401))
     }
-};
+}
