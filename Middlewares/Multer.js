@@ -1,6 +1,6 @@
+// src/middlewares/multer.js
 import multer from "multer";
-import { storage } from "./Cloudinary.js";
+import { storage } from "../config/cloudinary.js";
 
 const uploads = multer({ storage });
-
 export default uploads;
