@@ -8,10 +8,20 @@ const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
 const allowedOrigins = process.env.CLIENT_URL.split(',');
+console.log("origins: ", allowedOrigins)
+// const allowedOrigins = process.env.CLIENT_URL.split(",");
+
 app.use(cors({
-    origin: allowedOrigins,
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            cb(null, origin);   // 👈 return SAME origin string
+        } else {
+            cb(new Error("Not allowed by CORS"));
+        }
+    },
     credentials: true
 }));
+
 
 app.use(cookieParser())
 app.use(express.json());
