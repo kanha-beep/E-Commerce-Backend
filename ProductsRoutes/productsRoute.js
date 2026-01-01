@@ -20,7 +20,7 @@ router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, 
     user.roles = "seller";
     await user.save();
     console.log("role changes: ", user)
-    const imgPath = req.file ? req.file.filename : null;
+    const imgPath = req.file ? req.file.path : null;
     const product = await Products.create({ name, price, owner: userId, image: imgPath });
     console.log("Product created:", product);
     console.log("user of the product: ", user)
@@ -34,7 +34,7 @@ router.patch("/:productsId",verifyToken, uploads.single("image"), wrapAsync(asyn
     console.log("got body")
     const userId = req.user.id;
     console.log("3")
-    const imageName = req.file ? req.file.filename : null
+    const imageName = req.file ? req.file.path : null
     console.log("update image done")
     console.log(imageName, productsId, userId);
    console.log("finding product")
