@@ -27,8 +27,9 @@ router.post("/register", wrapAsync(async (req, res) => {
     const token = generateToken(user._id);
     res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
         path:"/"
     })
         .status(201).json({
@@ -56,8 +57,9 @@ router.post("/login", wrapAsync(async (req, res, next) => {
     const token = generateToken(user._id);
     res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
         path:"/"
     })
         .status(200).json({
@@ -84,8 +86,8 @@ router.post("/logout", (req, res) => {
     res
         .clearCookie("token", {
             httpOnly: true,
-            secure: true,
-            sameSite: "none",
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             path:"/"
         })
         .status(200)
