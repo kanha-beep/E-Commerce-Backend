@@ -23,7 +23,7 @@ router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, 
     console.log("Product created:", product);
     res.status(201).json(product);
 }))
-router.patch("/:productsId", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
+router.patch("/:productsId", uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("update image starts")
     const { productsId } = req.params;
     const { name, price } = req.body;
@@ -100,7 +100,7 @@ router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next)
     res.json({ message: "Product removed from cart" });
 }))
 //one products
-router.get("/:id", verifyToken, wrapAsync(async (req, res) => {
+router.get("/:id", wrapAsync(async (req, res) => {
     const { id } = req.params;
     const product = await Products.findById(id);
     if (!product) {
