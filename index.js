@@ -2,15 +2,18 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser"
 dotenv.config();
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
+const allowedOrigins = process.env.CLIENT_URL.split(',');
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser())
 app.use('/ProductsUploads', express.static('uploads'));
 import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
 import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"

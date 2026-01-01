@@ -65,9 +65,8 @@ router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, nex
         return res.status(201).json({ message: "Product added to new cart", cart });
     }
     console.log("Existing cart found with", cart.products.length, "products");
-
     if (cart.products.includes(productsId)) {
-        return next(new ExpressError("Product already in cart", 400));
+        return next(new ExpressError("Product already in cart", 401));
     }
 
     cart.products.push(productsId);
@@ -101,7 +100,7 @@ router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next)
     res.json({ message: "Product removed from cart" });
 }))
 //one products
-router.get("/:id", wrapAsync(async (req, res) => {
+router.get("/:id", verifyToken, wrapAsync(async (req, res) => {
     const { id } = req.params;
     const product = await Products.findById(id);
     if (!product) {

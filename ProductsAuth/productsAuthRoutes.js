@@ -22,19 +22,22 @@ router.post("/register", wrapAsync(async (req, res) => {
     if (existingUser) {
         throw new ExpressError("User already exists", 400);
     }
-    
+
     const user = await User.create({ username, email, password });
     const token = generateToken(user._id);
-
-    res.status(201).json({
-        message: "User registered successfully",
-        token,
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email
-        }
-    });
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    })
+        .status(201).json({
+            message: "User registered successfully",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+        });
 }));
 
 // Login
@@ -45,20 +48,24 @@ router.post("/login", wrapAsync(async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) return next(new ExpressError("Invalid credentials", 401))
-    
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return next(new ExpressError("Invalid credentials", 402))
-
+    console.log("login done now token start")
     const token = generateToken(user._id);
-    res.json({
-        message: "Login successful",
-        token,
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email
-        }
-    });
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    })
+        .status(200).json({
+            message: "Login successful",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+        });
 }));
 
 // Get current user
@@ -71,5 +78,15 @@ router.get("/me", verifyToken, wrapAsync(async (req, res) => {
         }
     });
 }));
+router.post("/logout", (req, res) => {
+    res
+        .clearCookie("token", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none"
+        })
+        .status(200)
+        .json({ message: "Logged out successfully" });
+});
 
 export default router;
