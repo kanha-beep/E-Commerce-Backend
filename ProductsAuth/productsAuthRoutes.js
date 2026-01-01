@@ -55,6 +55,7 @@ router.post("/login", wrapAsync(async (req, res, next) => {
     if (!isMatch) return next(new ExpressError("Invalid credentials", 402))
     console.log("login done now token start")
     const token = generateToken(user._id);
+    console.log("Setting cookie with secure:", process.env.NODE_ENV === 'production');
     res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
