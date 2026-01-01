@@ -8,12 +8,17 @@ const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
 const allowedOrigins = process.env.CLIENT_URL.split(',');
+// app.options("*", cors({
+//   origin: allowedOrigins,
+//   credentials: true
+// }));
 app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
-app.use(express.json());
+
 app.use(cookieParser())
+app.use(express.json());
 app.use('/ProductsUploads', express.static('uploads'));
 import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
 import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"
