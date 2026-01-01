@@ -3,7 +3,7 @@ import User from "../ProductsModel/productsUserSchema.js";
 import { generateToken, verifyToken } from "../Middlewares/auth.js";
 import wrapAsync from "../Middlewares/WrapSync.js";
 import ExpressError from "../Middlewares/ExpressError.js";
-
+const isProd = process.env.NODE_ENV === "production";
 
 const router = express.Router();
 
@@ -27,10 +27,11 @@ router.post("/register", wrapAsync(async (req, res) => {
     const token = generateToken(user._id);
     res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        path:"/"
     })
         .status(201).json({
             message: "User registered successfully",
@@ -44,6 +45,7 @@ router.post("/register", wrapAsync(async (req, res) => {
 
 // Login
 router.post("/login", wrapAsync(async (req, res, next) => {
+    console.log("login start")
     const { email, password } = req.body;
 
     if (!email || !password) return next(new ExpressError("Email and password are required", 400))
@@ -58,10 +60,10 @@ router.post("/login", wrapAsync(async (req, res, next) => {
     console.log("Setting cookie with secure:", process.env.NODE_ENV === 'production');
     res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        path:"/"
     })
         .status(200).json({
             message: "Login successful",
@@ -87,9 +89,9 @@ router.post("/logout", (req, res) => {
     res
         .clearCookie("token", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            path:"/"
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
+            path: "/",
         })
         .status(200)
         .json({ message: "Logged out successfully" });
