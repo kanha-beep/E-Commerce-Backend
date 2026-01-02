@@ -24,6 +24,7 @@ router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next)
     const { productsId } = req.params;
     const { rating, comment } = req.body;
     const userId = req.user.id;
+    if (!userId) return next(new ExpressError("Please Login in first.", 401))
     const product = await Products.findById(productsId);
     if (!product) return next(new ExpressError("Product not found", 404));
     const review = await Review.create({ owner: userId, ratings: rating, comment: comment, product: productsId });
