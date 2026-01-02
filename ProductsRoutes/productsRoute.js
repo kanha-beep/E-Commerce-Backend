@@ -3,8 +3,8 @@ import express from "express";
 const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
-import WrapAsync from "../middlewares/WraapAsync.js";
-import uploads from "../middlewares/Multer.js"
+import WrapAsync from "../middlewares/WrapAsync.js";
+import uploads from "../middlewares/multer.js"
 import ExpressError from "../middlewares/ExpressError.js"
 import { cloudinary } from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
@@ -142,7 +142,7 @@ router.get("/:id", WrapAsync(async (req, res) => {
 
 
 //all products
-router.get("/", wrapAsync(async (req, res) => {
+router.get("/", WrapAsync(async (req, res) => {
     const products = await Products.find({});
     res.json(products);
 }))
