@@ -48,6 +48,7 @@ router.post("/login", WrapAsync(async (req, res, next) => {
     if (!user) return next(new ExpressError("Invalid credentials", 401))
 
     const isMatch = await user.comparePassword(password);
+    console.log("isMatch: ", isMatch);
     if (!isMatch) return next(new ExpressError("Invalid credentials", 402))
     const token = generateToken(user._id);
     console.log("Setting cookie with secure:", process.env.NODE_ENV === 'production');

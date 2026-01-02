@@ -76,6 +76,15 @@ router.patch(
         res.status(200).json(product);
     })
 );
+router.delete("/:productsId", verifyToken, WrapAsync(async (req, res, next) => {
+    const { productsId } = req.params;
+    const userId = req.user.id;
+    const product = await Products.findById(productsId);
+    if (!product) return next(new ExpressError("Product not found", 404));
+    if (userId?.toString() !== product?.owner?.toString()) return next(new ExpressError("Not owner", 401));
+    await Products.findByIdAndDelete(productsId);
+    res.status(200).json({ message: "Product deleted" });
+}))
 //add product in cart
 router.post("/:productsId/add-cart", verifyToken, WrapAsync(async (req, res, next) => {
     const { productsId } = req.params;
