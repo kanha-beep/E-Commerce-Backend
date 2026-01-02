@@ -3,6 +3,7 @@ import express from "express";
 const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
+import Review from "../ProductsModel/ReviewsSchema.js"
 import wrapAsync from "../middlewares/WrapAsync.js";
 import uploads from "../middlewares/multer.js"
 import ExpressError from "../middlewares/ExpressError.js"
@@ -147,9 +148,38 @@ router.get("/:id", wrapAsync(async (req, res) => {
     }
     res.json(product);
 }))
-
-
-
+router.get("/:id/review", wrapAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const product = await Products.findById(id).populate({ path: "reviews", populate: { path: "owner", select: "username" } })
+    if (!product) return next(new ExpressError("Product not found", 404))
+    const reviews = product.reviews;
+    console.log("all reuivew: ", reviews)
+    res.status(200).json(product.reviews);
+}))
+router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next) => {
+    const { productsId } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
+    const product = await Products.findById(productsId);
+    if (!product) return next(new ExpressError("Product not found", 404));
+    const review = await Review.create({ owner: userId, ratings: rating, comment: comment, product: productsId });
+    console.log("review created: ", review)
+    product.reviews.push(review);
+    await product.save();
+    res.status(201).json({ message: "Review added" });
+}))
+router.delete("/:productsId/review/:reviewId", verifyToken, wrapAsync(async (req, res, next) => {
+    const { productsId, reviewId } = req.params;
+    const userId = req.user.id;
+    const product = await Products.findById(productsId);
+    if (!product) return next(new ExpressError("Product not found", 404));
+    const review = await Review.findById(reviewId);
+    if (!review) return next(new ExpressError("Review not found", 404));
+    if (userId.toString() !== review?.owner?._id?.toString()) return next(new ExpressError("Not owner", 401));
+    await Products.updateOne({ _id: productsId }, { $pull: { reviews: reviewId } });
+    await Review.findByIdAndDelete(reviewId);
+    res.status(200).json({ message: "Review deleted" });
+}))
 //all products
 router.get("/", wrapAsync(async (req, res) => {
     const products = await Products.find({});
