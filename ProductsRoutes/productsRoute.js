@@ -10,7 +10,95 @@ import ExpressError from "../middlewares/ExpressError.js"
 import { cloudinary } from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
+// get reveiws
+router.get("/:id/review", wrapAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const product = await Products.findById(id).populate({ path: "reviews", populate: { path: "owner", select: "username" } })
+    if (!product) return next(new ExpressError("Product not found", 404))
+    const reviews = product.reviews;
+    console.log("all reuivew: ", reviews)
+    res.status(200).json(product.reviews);
+}))
+// post reveiws
+router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next) => {
+    const { productsId } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
+    const product = await Products.findById(productsId);
+    if (!product) return next(new ExpressError("Product not found", 404));
+    const review = await Review.create({ owner: userId, ratings: rating, comment: comment, product: productsId });
+    console.log("review created: ", review)
+    product.reviews.push(review);
+    await product.save();
+    res.status(201).json({ message: "Review added" });
+}))
+// delete reviews
+router.delete("/:productsId/review/:reviewId", verifyToken, wrapAsync(async (req, res, next) => {
+    const { productsId, reviewId } = req.params;
+    const userId = req.user.id;
+    const product = await Products.findById(productsId);
+    if (!product) return next(new ExpressError("Product not found", 404));
+    const review = await Review.findById(reviewId);
+    if (!review) return next(new ExpressError("Review not found", 404));
+    if (userId.toString() !== review?.owner?._id?.toString()) return next(new ExpressError("Not owner", 401));
+    await Products.updateOne({ _id: productsId }, { $pull: { reviews: reviewId } });
+    await Review.findByIdAndDelete(reviewId);
+    res.status(200).json({ message: "Review deleted" });
+}))
+//cart details
+router.get("/cart-details", verifyToken, wrapAsync(async (req, res) => {
+    const cart = await Cart.findOne({ owner: req.user.id }).populate("products");
+    if (!cart) {
+        return res.json({ products: [] });
+    }
+    res.json(cart);
+}))
+//add product in cart
+router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, next) => {
+    const { productsId } = req.params;
+    const userId = req.user.id;
 
+    const product = await Products.findById(productsId);
+    if (!product) {
+        console.log("Product not found");
+        return next(new ExpressError("Product not found", 404));
+    }
+
+    let cart = await Cart.findOne({ owner: userId });
+    if (!cart) {
+        cart = await Cart.create({ owner: userId, products: [productsId] });
+        product.cart.push({ cart: cart._id, buyer: userId });
+        await product.save();
+        return res.status(201).json({ message: "Product added to new cart", cart });
+    }
+    console.log("Existing cart found with", cart.products.length, "products");
+    if (cart.products.includes(productsId)) {
+        return next(new ExpressError("Product already in cart", 401));
+    }
+
+    cart.products.push(productsId);
+    await cart.save();
+
+    product.cart.push({ cart: cart._id, buyer: userId });
+    await product.save();
+
+    res.json({ message: "Product added to cart", cart });
+}))
+// delete cart
+router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const cart = await Cart.updateOne(
+        { owner: req.user.id },
+        { $pull: { products: id } }
+    );
+    if (!cart) return next(new ExpressError("Cart not found", 404))
+    const product = await Products.updateOne(
+        { _id: id },
+        { $pull: { cart: { cart: cart._id } } }
+    );
+    if (!product) return next(new ExpressError("Product not found", 404))
+    res.json({ message: "Product removed from cart" });
+}))
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
@@ -86,59 +174,9 @@ router.delete("/:productsId", verifyToken, wrapAsync(async (req, res, next) => {
     await Products.findByIdAndDelete(productsId);
     res.status(200).json({ message: "Product deleted" });
 }))
-//add product in cart
-router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, next) => {
-    const { productsId } = req.params;
-    const userId = req.user.id;
 
-    const product = await Products.findById(productsId);
-    if (!product) {
-        console.log("Product not found");
-        return next(new ExpressError("Product not found", 404));
-    }
 
-    let cart = await Cart.findOne({ owner: userId });
-    if (!cart) {
-        cart = await Cart.create({ owner: userId, products: [productsId] });
-        product.cart.push({ cart: cart._id, buyer: userId });
-        await product.save();
-        return res.status(201).json({ message: "Product added to new cart", cart });
-    }
-    console.log("Existing cart found with", cart.products.length, "products");
-    if (cart.products.includes(productsId)) {
-        return next(new ExpressError("Product already in cart", 401));
-    }
 
-    cart.products.push(productsId);
-    await cart.save();
-
-    product.cart.push({ cart: cart._id, buyer: userId });
-    await product.save();
-
-    res.json({ message: "Product added to cart", cart });
-}))
-//cart details
-router.get("/cart-details", verifyToken, wrapAsync(async (req, res) => {
-    const cart = await Cart.findOne({ owner: req.user.id }).populate("products");
-    if (!cart) {
-        return res.json({ products: [] });
-    }
-    res.json(cart);
-}))
-router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next) => {
-    const { id } = req.params;
-    const cart = await Cart.updateOne(
-        { owner: req.user.id },
-        { $pull: { products: id } }
-    );
-    if (!cart) return next(new ExpressError("Cart not found", 404))
-    const product = await Products.updateOne(
-        { _id: id },
-        { $pull: { cart: { cart: cart._id } } }
-    );
-    if (!product) return next(new ExpressError("Product not found", 404))
-    res.json({ message: "Product removed from cart" });
-}))
 //one products
 router.get("/:id", wrapAsync(async (req, res) => {
     const { id } = req.params;
@@ -148,38 +186,7 @@ router.get("/:id", wrapAsync(async (req, res) => {
     }
     res.json(product);
 }))
-router.get("/:id/review", wrapAsync(async (req, res, next) => {
-    const { id } = req.params;
-    const product = await Products.findById(id).populate({ path: "reviews", populate: { path: "owner", select: "username" } })
-    if (!product) return next(new ExpressError("Product not found", 404))
-    const reviews = product.reviews;
-    console.log("all reuivew: ", reviews)
-    res.status(200).json(product.reviews);
-}))
-router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next) => {
-    const { productsId } = req.params;
-    const { rating, comment } = req.body;
-    const userId = req.user.id;
-    const product = await Products.findById(productsId);
-    if (!product) return next(new ExpressError("Product not found", 404));
-    const review = await Review.create({ owner: userId, ratings: rating, comment: comment, product: productsId });
-    console.log("review created: ", review)
-    product.reviews.push(review);
-    await product.save();
-    res.status(201).json({ message: "Review added" });
-}))
-router.delete("/:productsId/review/:reviewId", verifyToken, wrapAsync(async (req, res, next) => {
-    const { productsId, reviewId } = req.params;
-    const userId = req.user.id;
-    const product = await Products.findById(productsId);
-    if (!product) return next(new ExpressError("Product not found", 404));
-    const review = await Review.findById(reviewId);
-    if (!review) return next(new ExpressError("Review not found", 404));
-    if (userId.toString() !== review?.owner?._id?.toString()) return next(new ExpressError("Not owner", 401));
-    await Products.updateOne({ _id: productsId }, { $pull: { reviews: reviewId } });
-    await Review.findByIdAndDelete(reviewId);
-    res.status(200).json({ message: "Review deleted" });
-}))
+
 //all products
 router.get("/", wrapAsync(async (req, res) => {
     const products = await Products.find({});
