@@ -1,14 +1,14 @@
 import express from "express";
 import User from "../ProductsModel/productsUserSchema.js";
 import { generateToken, verifyToken } from "../middlewares/auth.js";
-import wrapAsync from "../middlewares/WrapSync.js";
+import WrapAsync from "../middlewares/WrapAsync.js";
 import ExpressError from "../middlewares/ExpressError.js";
 const isProd = process.env.NODE_ENV === "production";
 
 const router = express.Router();
 
 // Register
-router.post("/register", wrapAsync(async (req, res, next) => {
+router.post("/register", WrapAsync(async (req, res, next) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) return next(new ExpressError("All fields are required", 400))
@@ -39,7 +39,7 @@ router.post("/register", wrapAsync(async (req, res, next) => {
 }));
 
 // Login
-router.post("/login", wrapAsync(async (req, res, next) => {
+router.post("/login", WrapAsync(async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) return next(new ExpressError("Email and password are required", 400))
@@ -70,7 +70,7 @@ router.post("/login", wrapAsync(async (req, res, next) => {
 }));
 
 // Get current user
-router.get("/me", verifyToken, wrapAsync(async (req, res) => {
+router.get("/me", verifyToken, WrapAsync(async (req, res) => {
     res.json({
         user: {
             id: req.user.id,

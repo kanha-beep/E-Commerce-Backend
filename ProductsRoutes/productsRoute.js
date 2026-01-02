@@ -3,14 +3,14 @@ import express from "express";
 const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
-import wrapAsync from "../middlewares/WrapSync.js";
+import WrapAsync from "../middlewares/WraapAsync.js";
 import uploads from "../middlewares/Multer.js"
 import ExpressError from "../middlewares/ExpressError.js"
 import { cloudinary } from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
 
-router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
+router.post("/new", verifyToken, uploads.single("image"), WrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
     const userId = req.user.id;
@@ -51,7 +51,7 @@ router.patch(
     "/:productsId",
     verifyToken,
     uploads.single("image"),
-    wrapAsync(async (req, res, next) => {
+    WrapAsync(async (req, res, next) => {
         const { productsId } = req.params;
         const { name, price } = req.body;
         const userId = req.user.id;
@@ -76,42 +76,8 @@ router.patch(
         res.status(200).json(product);
     })
 );
-
-// router.patch("/:productsId", uploads.single("image"), verifyToken, wrapAsync(async (req, res, next) => {
-//     console.log("update image starts")
-//     const { productsId } = req.params;
-//     const { name, price } = req.body;
-//     const userId = req.user.id;
-
-//     const product = await Products.findById(productsId)
-//     if (!product) return next(new ExpressError("Product not found", 404));
-//     if (userId.toString() !== product.owner.toString()) return next(new ExpressError("not owner", 401))
-
-//     if (name) product.name = name;
-//     if (price) product.price = price;
-
-//     const updateData = {};
-//     if (name) updateData.name = name;
-//     if (price) updateData.price = price;
-//     console.log("updateData: ", updateData)
-//     if (req.file) {
-//         console.log("image update starts")
-//         const b64 = req.file.buffer.toString("base64");
-//         const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-//         console.log("dataURI: ", dataURI)
-//         const result = await cloudinary.uploader.upload(dataURI, {
-//             folder: "products",
-//         });
-//         console.log("result: ", result)
-//         updateData.image = result.secure_url;
-//     }
-
-//     console.log("Updated product:", product);
-//     await product.save();
-//     res.status(200).json(product);
-// }))
 //add product in cart
-router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, next) => {
+router.post("/:productsId/add-cart", verifyToken, WrapAsync(async (req, res, next) => {
     const { productsId } = req.params;
     const userId = req.user.id;
 
@@ -142,14 +108,14 @@ router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, nex
     res.json({ message: "Product added to cart", cart });
 }))
 //cart details
-router.get("/cart-details", verifyToken, wrapAsync(async (req, res) => {
+router.get("/cart-details", verifyToken, WrapAsync(async (req, res) => {
     const cart = await Cart.findOne({ owner: req.user.id }).populate("products");
     if (!cart) {
         return res.json({ products: [] });
     }
     res.json(cart);
 }))
-router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next) => {
+router.delete("/cart-details/:id", verifyToken, WrapAsync(async (req, res, next) => {
     const { id } = req.params;
     const cart = await Cart.findOne({ owner: req.user.id });
     if (!cart) return next(new ExpressError("Cart not found", 404))
@@ -164,7 +130,7 @@ router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next)
     res.json({ message: "Product removed from cart" });
 }))
 //one products
-router.get("/:id", wrapAsync(async (req, res) => {
+router.get("/:id", WrapAsync(async (req, res) => {
     const { id } = req.params;
     const product = await Products.findById(id);
     if (!product) {
