@@ -126,16 +126,16 @@ router.get("/cart-details", verifyToken, wrapAsync(async (req, res) => {
 }))
 router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next) => {
     const { id } = req.params;
-    const cart = await Cart.findOne({ owner: req.user.id });
+    const cart = await Cart.updateOne(
+        { owner: req.user.id },
+        { $pull: { products: id } }
+    );
     if (!cart) return next(new ExpressError("Cart not found", 404))
-    cart.products = cart.products.filter((productId) => productId.toString() !== id);
-    await cart.save();
-    const product = await Products.findById(id);
-    if (!product) next(new ExpressError("Product not found", 405))
-    console.log("removing id of cart from product")
-    product.cart = product.cart.filter((cartItem) => cartItem.cart.toString() !== cart._id.toString());
-    await product.save();
-
+    const product = await Products.updateOne(
+        { _id: id },
+        { $pull: { cart: { cart: cart._id } } }
+    );
+    if (!product) return next(new ExpressError("Product not found", 404))
     res.json({ message: "Product removed from cart" });
 }))
 //one products

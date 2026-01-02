@@ -13,7 +13,7 @@ export const verifyToken = async (req, res, next) => {
         const token = req.cookies.token;
         // console.log("got token in verify auth: ", token)
 
-        if (!token) return next(new ExpressError('Access denied. No token provided.', 401))
+        if (!token) return next(new ExpressError('Please Login in first.', 401))
 
 
         const decoded = jwt.verify(token, JWT_SECRET);
