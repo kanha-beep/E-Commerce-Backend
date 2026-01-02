@@ -4,59 +4,112 @@ const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
 import wrapAsync from "../middlewares/WrapSync.js";
+import uploads from "../middlewares/Multer.js"
 import ExpressError from "../middlewares/ExpressError.js"
-import uploads from "../middlewares/multer.js"
+import { cloudinary } from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
-//add
+
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
     const userId = req.user.id;
     const { name, price } = req.body;
     if (!name || !price) return next(new ExpressError("Name and price are required", 400));
+
     const user = await User.findById({ _id: userId });
-    console.log("got user: ", user)
     user.roles = "seller";
     await user.save();
-    console.log("role changes: ", user)
-    const imgPath = req.file ? req.file.path : null;
-    const product = await Products.create({ name, price, owner: userId, image: imgPath });
+    console.log("role saved")
+    let imageUrl = null;
+    console.log("Image upload starts");
+    if (req.file) {
+        console.log("1")
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        console.log("2")
+        const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+        console.log("3")
+        try {
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: "products"
+            });
+            console.log("resilt: ", result)
+            imageUrl = result.secure_url;
+            console.log("Image uploaded successfully:", imageUrl);
+        } catch (error) {
+            console.error("Error uploading image to Cloudinary:", error);
+            return next(new ExpressError("Error uploading image", 500));
+        }
+
+    }
+    console.log("Image URL:", imageUrl);
+    const product = await Products.create({ name, price, owner: userId, image: imageUrl });
     console.log("Product created:", product);
-    console.log("user of the product: ", user)
     res.status(201).json(product);
 }))
-router.patch("/:productsId",verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
-    console.log("update image starts")
-    const { productsId } = req.params;
-    console.log("2")
-    const { name, price } = req.body;
-    console.log("got body")
-    const userId = req.user.id;
-    console.log("3")
-    const imageName = req.file ? req.file.path : null
-    console.log("update image done")
-    console.log(imageName, productsId, userId);
-   console.log("finding product")
-    const product = await Products.findById({ _id: productsId, owner: userId })
-    // console.log("Product found:", product);
-    if (!product) return next(new ExpressError("Product not found", 404));
-    console.log("owner starts")
-    console.log("owner: ", product.owner.toString())
-    console.log("user: ", userId)
-     if(userId.toString() !== product.owner.toString()) return next(new ExpressError("not owner", 401))
-    // if (product.owner.toString() !== userId) return next(new ExpressError("Unauthorized", 401));
-    console.log("owner done")
-    if (name) product.name = name;
-    if (price) product.price = price;
-    // console.log("fianlly changing image")
-    if (req.file) {
-        product.image = imageName;
-    }
-    console.log("Updated product:", product);
-    await product.save();
-    res.status(200).json(product);
-}))
+router.patch(
+    "/:productsId",
+    verifyToken,
+    uploads.single("image"),
+    wrapAsync(async (req, res, next) => {
+        const { productsId } = req.params;
+        const { name, price } = req.body;
+        const userId = req.user.id;
+
+        const product = await Products.findById(productsId);
+        if (!product) return next(new ExpressError("Product not found", 404));
+        if (userId.toString() !== product.owner.toString())
+            return next(new ExpressError("Not owner", 401));
+
+        if (name) product.name = name;
+        if (price) product.price = price;
+
+        if (req.file) {
+            const b64 = req.file.buffer.toString("base64");
+            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: "products",
+            });
+            product.image = result.secure_url;
+        }
+        await product.save();
+        res.status(200).json(product);
+    })
+);
+
+// router.patch("/:productsId", uploads.single("image"), verifyToken, wrapAsync(async (req, res, next) => {
+//     console.log("update image starts")
+//     const { productsId } = req.params;
+//     const { name, price } = req.body;
+//     const userId = req.user.id;
+
+//     const product = await Products.findById(productsId)
+//     if (!product) return next(new ExpressError("Product not found", 404));
+//     if (userId.toString() !== product.owner.toString()) return next(new ExpressError("not owner", 401))
+
+//     if (name) product.name = name;
+//     if (price) product.price = price;
+
+//     const updateData = {};
+//     if (name) updateData.name = name;
+//     if (price) updateData.price = price;
+//     console.log("updateData: ", updateData)
+//     if (req.file) {
+//         console.log("image update starts")
+//         const b64 = req.file.buffer.toString("base64");
+//         const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+//         console.log("dataURI: ", dataURI)
+//         const result = await cloudinary.uploader.upload(dataURI, {
+//             folder: "products",
+//         });
+//         console.log("result: ", result)
+//         updateData.image = result.secure_url;
+//     }
+
+//     console.log("Updated product:", product);
+//     await product.save();
+//     res.status(200).json(product);
+// }))
 //add product in cart
 router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, next) => {
     const { productsId } = req.params;

@@ -1,20 +1,29 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
+
 import cors from "cors";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser"
-dotenv.config();
+console.log("Environment loaded:");
+console.log("MONGO_URI:", process.env.MONGO_URI ? "SET" : "NOT SET");
+console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
+console.log("CLOUDINARY_API_KEY:", process.env.CLOUDINARY_API_KEY);
+console.log("CLOUDINARY_API_SECRET:", process.env.CLOUDINARY_API_SECRET ? "***" : "NOT SET");
+
+import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
+import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"
+
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
 const allowedOrigins = process.env.CLIENT_URL.split(',');
 console.log("origins: ", allowedOrigins)
-// const allowedOrigins = process.env.CLIENT_URL.split(",");
 
 app.use(cors({
     origin: (origin, cb) => {
         if (!origin || allowedOrigins.includes(origin)) {
-            cb(null, origin);   // 👈 return SAME origin string
+            cb(null, origin);
         } else {
             cb(new Error("Not allowed by CORS"));
         }
@@ -23,12 +32,9 @@ app.use(cors({
 }));
 app.set("trust proxy", 1);
 
-
 app.use(cookieParser())
 app.use(express.json());
 app.use('/ProductsUploads', express.static('uploads'));
-import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
-import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"
 app.use("/api/products", ProductsRoutes)
 app.use("/api/auth", ProductsAuthRoutes)
 app.get("/", (req, res) => {

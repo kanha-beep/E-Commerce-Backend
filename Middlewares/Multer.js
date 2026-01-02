@@ -1,6 +1,6 @@
-// src/middlewares/multer.js
 import multer from "multer";
-import { storage } from "../config/cloudinary.js";
 
-const uploads = multer({ storage });
-export default uploads;
+export default multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
