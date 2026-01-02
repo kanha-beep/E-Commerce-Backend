@@ -3,11 +3,11 @@ import express from "express";
 const router = express.Router();
 import Products from "../ProductsModel/productsSchema.js";
 import Cart from "../ProductsModel/productsCartSchema.js"
-import wrapAsync from "../Middlewares/WrapAsync.js";
-import uploads from "../Middlewares/multer.js"
-import ExpressError from "../Middlewares/ExpressError.js"
+import wrapAsync from "../middlewares/WrapAsync.js";
+import uploads from "../middlewares/multer.js"
+import ExpressError from "../middlewares/ExpressError.js"
 import { cloudinary } from "../config/cloudinary.js"
-import { verifyToken } from "../Middlewares/auth.js";
+import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
 
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
