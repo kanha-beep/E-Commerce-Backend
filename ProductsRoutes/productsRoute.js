@@ -7,7 +7,7 @@ import Review from "../ProductsModel/ReviewsSchema.js"
 import wrapAsync from "../middlewares/WrapAsync.js";
 import uploads from "../middlewares/multer.js"
 import ExpressError from "../middlewares/ExpressError.js"
-import  cloudinary  from "../config/cloudinary.js"
+import cloudinary from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
 // get reveiws
