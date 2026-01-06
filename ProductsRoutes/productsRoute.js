@@ -103,6 +103,10 @@ router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next)
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
+    console.log("▶ Content-Type:", req.headers["content-type"]);
+    console.log("▶ req.file exists:", !!req.file);
+    console.log("▶ req.file:", req.file);
+    console.log("▶ req.body:", req.body);
     const userId = req.user.id;
     const { name, price } = req.body;
     if (!name || !price) return next(new ExpressError("Name and price are required", 400));
@@ -152,6 +156,10 @@ router.patch(
         const { productsId } = req.params;
         const { name, price } = req.body;
         const userId = req.user.id;
+        console.log("▶ Content-Type:", req.headers["content-type"]);
+        console.log("▶ req.file exists:", !!req.file);
+        console.log("▶ req.file:", req.file);
+        console.log("▶ req.body:", req.body);
 
         const product = await Products.findById(productsId);
         if (!product) return next(new ExpressError("Product not found", 404));
