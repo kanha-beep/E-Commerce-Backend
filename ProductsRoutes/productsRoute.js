@@ -114,14 +114,21 @@ router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, 
     let imageUrl = null;
     console.log("Image upload starts");
     if (req.file) {
-        console.log("1")
-        const b64 = Buffer.from(req.file.buffer).toString("base64");
-        console.log("2")
-        const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
-        console.log("3")
+        // console.log("1")
+        // const b64 = Buffer.from(req.file.buffer).toString("base64");
+        // console.log("2")
+        // const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+        // console.log("3")
         try {
-            const result = await cloudinary.uploader.upload(dataURI, {
-                folder: "products"
+            const result = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { folder: "products" },
+                    (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result);
+                    }
+                );
+                stream.end(req.file.buffer);
             });
             console.log("resilt: ", result)
             imageUrl = result.secure_url;
@@ -153,15 +160,29 @@ router.patch(
 
         if (name) product.name = name;
         if (price) product.price = price;
-
         if (req.file) {
-            const b64 = req.file.buffer.toString("base64");
-            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-            const result = await cloudinary.uploader.upload(dataURI, {
-                folder: "products",
+            const result = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { folder: "products" },
+                    (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result);
+                    }
+                );
+                stream.end(req.file.buffer);
             });
+
             product.image = result.secure_url;
         }
+
+        // if (req.file) {
+        //     const b64 = req.file.buffer.toString("base64");
+        //     const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        //     const result = await cloudinary.uploader.upload(dataURI, {
+        //         folder: "products",
+        //     });
+        //     product.image = result.secure_url;
+        // }
         await product.save();
         res.status(200).json(product);
     })
