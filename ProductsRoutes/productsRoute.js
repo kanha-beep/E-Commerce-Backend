@@ -16,7 +16,7 @@ router.get("/:id/review", wrapAsync(async (req, res, next) => {
     const product = await Products.findById(id).populate({ path: "reviews", populate: { path: "owner", select: "username" } })
     if (!product) return next(new ExpressError("Product not found", 404))
     const reviews = product.reviews;
-    console.log("all reuivew: ", reviews)
+    // console.log("all reuivew: ", reviews)
     res.status(200).json(product.reviews);
 }))
 // post reveiws
@@ -28,11 +28,37 @@ router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next)
     const product = await Products.findById(productsId);
     if (!product) return next(new ExpressError("Product not found", 404));
     const review = await Review.create({ owner: userId, ratings: rating, comment: comment, product: productsId });
-    console.log("review created: ", review)
+    // console.log("review created: ", review)
     product.reviews.push(review);
     await product.save();
     res.status(201).json({ message: "Review added" });
 }))
+router.patch("/:productsId/review/:reviewId",
+    verifyToken,
+    wrapAsync(async (req, res, next) => {
+        const { productsId, reviewId } = req.params;
+        // console.log("got peutc id and reveiw id: ", productsId, reviewId)
+        const { comment, rating } = req.body;
+        // console.log("got new comment and ratngs: ", comment, rating)
+        const review = await Review.findById(reviewId);
+        if (!review) return next(new ExpressError("Review not found", 404));
+
+        // console.log("Review owner:", review.owner.toString());
+        // // console.log("Current user:", req.user.id);
+
+        if (review.owner.toString() !== req.user.id.toString()) {
+            return next(new ExpressError("Unauthorized", 401));
+        }
+
+        // console.log("review update start")
+        review.comment = comment;
+        review.ratings = rating; // Note: using 'ratings' to match schema
+        await review.save();
+
+        res.status(200).json({ message: "Review updated", review });
+    })
+);
+
 // delete reviews
 router.delete("/:productsId/review/:reviewId", verifyToken, wrapAsync(async (req, res, next) => {
     const { productsId, reviewId } = req.params;
@@ -47,15 +73,28 @@ router.delete("/:productsId/review/:reviewId", verifyToken, wrapAsync(async (req
     res.status(200).json({ message: "Review deleted" });
 }))
 //cart details
-router.get("/cart-details", verifyToken, wrapAsync(async (req, res) => {
-    const cart = await Cart.findOne({ owner: req.user.id }).populate("products");
-    if (!cart) {
-        return res.json({ products: [] });
-    }
-    res.json(cart);
+router.get("/cart-details", verifyToken, wrapAsync(async (req, res, next) => {
+    console.log("cart starts")
+    const cart = await Cart.findOne({ owner: req.user.id }).populate("products.product");
+    console.log("cart: ", cart)
+    if (!cart) return next(res.json({ products: [] }))
+    const items = cart.products
+        .filter(p => p.product) // 🔥 remove null products
+        .map(p => ({
+            id: p.product._id,
+            name: p.product.name,
+            price: p.product.price,
+            quantity: p.quantity,
+            image: p.product.image,
+        }));
+
+    console.log("ietms: ", items)
+    res.json(items);
 }))
 //add product in cart
 router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, next) => {
+
+    console.log("add starts")
     const { productsId } = req.params;
     const userId = req.user.id;
 
@@ -67,39 +106,75 @@ router.post("/:productsId/add-cart", verifyToken, wrapAsync(async (req, res, nex
 
     let cart = await Cart.findOne({ owner: userId });
     if (!cart) {
-        cart = await Cart.create({ owner: userId, products: [productsId] });
-        product.cart.push({ cart: cart._id, buyer: userId });
-        await product.save();
-        return res.status(201).json({ message: "Product added to new cart", cart });
+        cart = await Cart.create({ owner: userId, products: [{ product: productsId, quantity: 1 }] });
+        // product.cart.push({ cart: cart._id, buyer: userId });
+        // await product.save();
+        const populatedCart = await cart.populate("products.product");
+
+        return res.status(201).json({
+            message: "Product added to new cart",
+            cart: populatedCart,
+        });
     }
     console.log("Existing cart found with", cart.products.length, "products");
-    if (cart.products.includes(productsId)) {
-        return next(new ExpressError("Product already in cart", 401));
+    // check if product already exists
+    const item = cart.products.find(
+        (p) => p.product.toString() === productsId
+    );
+    if (item) {
+        item.quantity += 1; // increase quantity
+    } else {
+        cart.products.push({ product: productsId, quantity: 1 });
     }
-
-    cart.products.push(productsId);
     await cart.save();
-
-    product.cart.push({ cart: cart._id, buyer: userId });
-    await product.save();
-
     res.json({ message: "Product added to cart", cart });
 }))
+router.patch("/cart/:productId",
+    verifyToken,
+    wrapAsync(async (req, res, next) => {
+        const { productId } = req.params;
+        const { quantity } = req.body;
+
+        if (quantity < 1) {
+            return next(new ExpressError("Quantity must be at least 1", 400));
+        }
+
+        const cart = await Cart.findOne({ owner: req.user.id });
+        if (!cart) return next(new ExpressError("Cart not found", 404));
+
+        const item = cart.products.find(
+            (p) => p.product.toString() === productId
+        );
+
+        if (!item) {
+            return next(new ExpressError("Product not in cart", 404));
+        }
+
+        item.quantity = quantity;
+        await cart.save();
+
+        res.json(cart);
+    })
+);
+
 // delete cart
-router.delete("/cart-details/:id", verifyToken, wrapAsync(async (req, res, next) => {
-    const { id } = req.params;
-    const cart = await Cart.updateOne(
-        { owner: req.user.id },
-        { $pull: { products: id } }
-    );
-    if (!cart) return next(new ExpressError("Cart not found", 404))
-    const product = await Products.updateOne(
-        { _id: id },
-        { $pull: { cart: { cart: cart._id } } }
-    );
-    if (!product) return next(new ExpressError("Product not found", 404))
-    res.json({ message: "Product removed from cart" });
-}))
+router.delete("/cart/:productId",
+    verifyToken,
+    wrapAsync(async (req, res, next) => {
+        const { productId } = req.params;
+
+        const cart = await Cart.findOneAndUpdate(
+            { owner: req.user.id },
+            { $pull: { products: { product: productId } } },
+            { new: true }
+        );
+
+        if (!cart) return next(new ExpressError("Cart not found", 404));
+
+        res.json(cart);
+    })
+);
+
 router.post("/new", verifyToken, uploads.single("image"), wrapAsync(async (req, res, next) => {
     console.log("Request body:", req.body);
     console.log("Request file:", req.file);
@@ -211,6 +286,7 @@ router.delete("/:productsId", verifyToken, wrapAsync(async (req, res, next) => {
 router.get("/:id", wrapAsync(async (req, res) => {
     const { id } = req.params;
     const product = await Products.findById(id);
+    // console.log("single product: ", product)
     if (!product) {
         throw new ExpressError("Product not found", 404);
     }
