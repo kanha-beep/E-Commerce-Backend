@@ -10,6 +10,23 @@ import ExpressError from "../middlewares/ExpressError.js"
 import cloudinary from "../config/cloudinary.js"
 import { verifyToken } from "../middlewares/auth.js";
 import User from "../ProductsModel/productsUserSchema.js";
+// import Razorpay from "razorpay";
+
+// const razorpay = new Razorpay({
+//     key_id: process.env.RAZORPAY_KEY_ID,
+//     key_secret: process.env.RAZORPAY_KEY_SECRET,
+// });
+
+// router.post("/create-order", async (req, res) => {
+//     const options = {
+//         amount: 50000, // Rs 500 = 50000 paise
+//         currency: "INR",
+//         receipt: "order_rcptid_11",
+//     };
+
+//     const order = await razorpay.orders.create(options);
+//     res.json(order);
+// });
 // get reveiws
 router.get("/:id/review", wrapAsync(async (req, res, next) => {
     const { id } = req.params;
