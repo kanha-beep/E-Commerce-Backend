@@ -34,7 +34,6 @@ app.set("trust proxy", 1);
 
 app.use(cookieParser())
 app.use(express.json());
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/ProductsUploads', express.static('uploads'));
 app.use("/api/products", ProductsRoutes)
