@@ -22,7 +22,7 @@ export const verifyToken = async (req, res, next) => {
         if (!user) return next(new ExpressError('User not authorized in token.', 401))
 
 
-        req.user = { id: user._id, username: user.username, email: user.email };
+        req.user = { id: user._id, username: user.username, email: user.email, roles: user.roles };
         next();
     } catch (error) {
         next(new ExpressError('Error in Token.', 401))

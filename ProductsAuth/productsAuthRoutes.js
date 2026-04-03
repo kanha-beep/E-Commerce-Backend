@@ -76,7 +76,8 @@ router.get("/me", verifyToken, WrapAsync(async (req, res) => {
         user: {
             id: req.user.id,
             username: req.user.username,
-            email: req.user.email
+            email: req.user.email,
+            roles: req.user.roles
         }
     });
 }));

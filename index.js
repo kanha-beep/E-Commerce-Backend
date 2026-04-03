@@ -15,6 +15,7 @@ console.log("CLOUDINARY_API_SECRET:", process.env.CLOUDINARY_API_SECRET ? "***" 
 
 import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
 import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"
+import DemandRoutes from "./DemandRoutes/demandRoute.js"
 
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
@@ -40,6 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/ProductsUploads', express.static('uploads'));
 app.use("/api/products", ProductsRoutes)
 app.use("/api/auth", ProductsAuthRoutes)
+app.use("/api/demand", DemandRoutes)
 app.get("/", (req, res) => {
     res.send("Server running...");
 });
@@ -52,4 +54,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
 });
-
