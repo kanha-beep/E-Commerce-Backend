@@ -1,5 +1,6 @@
 import express from "express";
 import cloudinary from "../config/cloudinary.js";
+import CommunityRequest from "../ProductsModel/communityRequestSchema.js";
 import CustomOrder from "../ProductsModel/customOrderSchema.js";
 import Order from "../ProductsModel/orderSchema.js";
 import Review from "../ProductsModel/ReviewsSchema.js";
@@ -203,7 +204,8 @@ router.get("/:id/review", wrapAsync(async (req, res, next) => {
 
 router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next) => {
   const { productsId } = req.params;
-  const { rating, comment } = req.body;
+  const comment = String(req.body.comment || "").trim();
+  const { rating } = req.body;
   const userId = req.user.id;
 
   if (!userId) return next(new ExpressError("Please Login in first.", 401));
@@ -214,6 +216,14 @@ router.post("/:productsId/review", verifyToken, wrapAsync(async (req, res, next)
   const parsedRating = Number(rating);
   if (!comment || parsedRating < 1 || parsedRating > 5) {
     return next(new ExpressError("Valid comment and rating are required", 400));
+  }
+
+  const existingReview = await Review.findOne({ owner: userId, product: productsId });
+  if (existingReview) {
+    existingReview.comment = comment;
+    existingReview.ratings = parsedRating;
+    await existingReview.save();
+    return res.status(200).json({ message: "Review updated" });
   }
 
   const review = await Review.create({
@@ -383,6 +393,9 @@ router.post("/:productsId/custom-orders", verifyToken, wrapAsync(async (req, res
 
   const product = await Products.findById(productsId).populate("owner", "username email");
   if (!product) return next(new ExpressError("Product not found", 404));
+  if (product.owner._id.toString() === req.user.id.toString()) {
+    return next(new ExpressError("You cannot create a custom order for your own product", 400));
+  }
 
   const parsedCharge = Number(extraCharge);
   if (!improvementNote || Number.isNaN(parsedCharge) || parsedCharge < 0) {
@@ -487,6 +500,11 @@ router.post("/custom-orders/:customOrderId/payment-verify", verifyToken, wrapAsy
   if (customOrder.buyer._id.toString() !== req.user.id.toString()) {
     return next(new ExpressError("Only the buyer can verify this payment", 403));
   }
+  if (!customOrder.gatewayOrderId || customOrder.gatewayOrderId !== razorpay_order_id) {
+    customOrder.paymentStatus = "failed";
+    await customOrder.save();
+    return next(new ExpressError("Payment order does not match this custom order", 400));
+  }
 
   const valid = verifyRazorpaySignature(
     razorpay_order_id,
@@ -512,7 +530,7 @@ router.patch("/cart/:productId", verifyToken, wrapAsync(async (req, res, next) =
   const { productId } = req.params;
   const quantity = Number(req.body.quantity);
 
-  if (quantity < 1) {
+  if (!Number.isInteger(quantity) || quantity < 1) {
     return next(new ExpressError("Quantity must be at least 1", 400));
   }
 
@@ -603,6 +621,12 @@ router.post("/checkout/cart-verify", verifyToken, wrapAsync(async (req, res, nex
   if (!order) return next(new ExpressError("Order not found", 404));
   if (order.buyer.toString() !== req.user.id.toString()) {
     return next(new ExpressError("Unauthorized order access", 403));
+  }
+  if (!order.gatewayOrderId || order.gatewayOrderId !== razorpay_order_id) {
+    order.paymentStatus = "failed";
+    order.status = "failed";
+    await order.save();
+    return next(new ExpressError("Payment order does not match this checkout", 400));
   }
 
   const valid = verifyRazorpaySignature(
@@ -756,7 +780,6 @@ router.patch("/:productsId", verifyToken, uploads.array("media", 10), wrapAsync(
   product.media = [...payload.existingMedia, ...uploadedMedia];
   product.image =
     product.media.find((item) => item.kind === "image")?.url ||
-    product.image ||
     "";
 
   await product.save();
@@ -773,7 +796,22 @@ router.delete("/:productsId", verifyToken, wrapAsync(async (req, res, next) => {
     return next(new ExpressError("Not owner", 401));
   }
 
+  await Review.deleteMany({ product: productsId });
+  await CustomOrder.deleteMany({ product: productsId });
+  await Cart.updateMany({}, { $pull: { products: { product: product._id } } });
   await Products.findByIdAndDelete(productsId);
+
+  await CommunityRequest.updateMany(
+    { linkedProduct: productsId },
+    {
+      $set: {
+        linkedProduct: null,
+        status: "assigned",
+        producerUpdatedAt: new Date(),
+      },
+    }
+  );
+
   res.status(200).json({ message: "Product deleted" });
 }));
 

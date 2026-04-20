@@ -6,12 +6,6 @@ import express from "express";
 
 import cors from "cors";
 import mongoose from "mongoose";
-import cookieParser from "cookie-parser"
-console.log("Environment loaded:");
-console.log("MONGO_URI:", process.env.MONGO_URI ? "SET" : "NOT SET");
-console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
-console.log("CLOUDINARY_API_KEY:", process.env.CLOUDINARY_API_KEY);
-console.log("CLOUDINARY_API_SECRET:", process.env.CLOUDINARY_API_SECRET ? "***" : "NOT SET");
 
 import ProductsRoutes from "./ProductsRoutes/productsRoute.js"
 import ProductsAuthRoutes from "./ProductsAuth/productsAuthRoutes.js"
@@ -20,22 +14,23 @@ import DemandRoutes from "./DemandRoutes/demandRoute.js"
 const app = express();
 const MONGO_URI = process.env.MONGO_URI;
 await mongoose.connect(MONGO_URI);
-const allowedOrigins = process.env.CLIENT_URL.split(',');
-console.log("origins: ", allowedOrigins)
+const allowedOrigins = String(process.env.CLIENT_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 app.use(cors({
     origin: (origin, cb) => {
         if (!origin || allowedOrigins.includes(origin)) {
-            cb(null, origin);
+            cb(null, true);
         } else {
             cb(new Error("Not allowed by CORS"));
         }
     },
-    credentials: true
+    credentials: false
 }));
 app.set("trust proxy", 1);
 
-app.use(cookieParser())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/ProductsUploads', express.static('uploads'));

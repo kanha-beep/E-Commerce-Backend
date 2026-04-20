@@ -8,23 +8,29 @@ export const generateToken = (userId) => {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
 };
 
+function extractToken(req) {
+    const authHeader = req.get("authorization") || req.get("Authorization") || "";
+
+    if (authHeader.toLowerCase().startsWith("bearer ")) {
+        return authHeader.slice(7).trim();
+    }
+
+    return "";
+}
+
 export const verifyToken = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
-        // console.log("got token in verify auth: ", token)
+        const token = extractToken(req);
 
-        if (!token) return next(new ExpressError('Please Login in first.', 401))
-
+        if (!token) return next(new ExpressError('Please login first.', 401));
 
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(decoded.userId);
-        // console.log("user in verify auth: ", user)
-        if (!user) return next(new ExpressError('User not authorized in token.', 401))
-
+        const user = await User.findById(decoded.userId).select("username email roles");
+        if (!user) return next(new ExpressError('User not authorized.', 401));
 
         req.user = { id: user._id, username: user.username, email: user.email, roles: user.roles };
         next();
     } catch (error) {
-        next(new ExpressError('Error in Token.', 401))
+        next(new ExpressError('Invalid or expired token.', 401));
     }
-}
+};

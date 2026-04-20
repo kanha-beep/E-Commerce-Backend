@@ -3,71 +3,58 @@ import User from "../ProductsModel/productsUserSchema.js";
 import { generateToken, verifyToken } from "../middlewares/auth.js";
 import WrapAsync from "../middlewares/WrapAsync.js";
 import ExpressError from "../middlewares/ExpressError.js";
-const isProd = process.env.NODE_ENV === "production";
 
 const router = express.Router();
 
+function getUserResponse(user) {
+    return {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+    };
+}
+
 // Register
 router.post("/register", WrapAsync(async (req, res, next) => {
-    const { username, email, password } = req.body;
+    const username = String(req.body.username || "").trim();
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
 
-    if (!username || !email || !password) return next(new ExpressError("All fields are required", 400))
+    if (!username || !email || !password) return next(new ExpressError("All fields are required", 400));
 
     const existingUser = await User.findOne({
         $or: [{ email }, { username }]
     });
-    if (existingUser) return next(new ExpressError("User already exists", 403))
+    if (existingUser) return next(new ExpressError("User already exists", 409));
 
     const user = await User.create({ username, email, password });
     const token = generateToken(user._id);
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
-        .status(201).json({
-            message: "User registered successfully",
-            user: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                roles: user.roles
-            }
-        });
+    res.status(201).json({
+        message: "User registered successfully",
+        token,
+        user: getUserResponse(user),
+    });
 }));
 
 // Login
 router.post("/login", WrapAsync(async (req, res, next) => {
-    const { email, password } = req.body;
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
 
-    if (!email || !password) return next(new ExpressError("Email and password are required", 400))
+    if (!email || !password) return next(new ExpressError("Email and password are required", 400));
 
     const user = await User.findOne({ email });
-    if (!user) return next(new ExpressError("Invalid credentials", 401))
+    if (!user) return next(new ExpressError("Invalid credentials", 401));
 
     const isMatch = await user.comparePassword(password);
-    console.log("isMatch: ", isMatch);
-    if (!isMatch) return next(new ExpressError("Invalid credentials", 402))
+    if (!isMatch) return next(new ExpressError("Invalid credentials", 401));
     const token = generateToken(user._id);
-    console.log("Setting cookie with secure:", process.env.NODE_ENV === 'production');
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
-        .status(200).json({
-            message: "Login successful",
-            user: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                roles: user.roles
-            }
-        });
+    res.status(200).json({
+        message: "Login successful",
+        token,
+        user: getUserResponse(user),
+    });
 }));
 
 // Get current user
@@ -82,15 +69,7 @@ router.get("/me", verifyToken, WrapAsync(async (req, res) => {
     });
 }));
 router.post("/logout", (req, res) => {
-    res
-        .clearCookie("token", {
-            httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? 'none' : 'lax',
-            path: "/",
-        })
-        .status(200)
-        .json({ message: "Logged out successfully" });
+    res.status(200).json({ message: "Logged out successfully" });
 });
 
 export default router;
